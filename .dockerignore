@@ -1,0 +1,28 @@
+# Maven
+# ... existing code ...
+target/
+.mvn/
+**/hs_err_pid*.log
+
+# IDE
+# ... existing code ...
+.idea/
+*.iml
+.vscode/
+
+# Git
+# ... existing code ...
+.git/
+.gitignore
+
+# OS
+# ... existing code ...
+.DS_Store
+Thumbs.db
+
+# Logs
+# ... existing code ...
+*.log
+
+# Docker files themselves (оставляем в контексте при необходимости)
+# ... existing code ...
