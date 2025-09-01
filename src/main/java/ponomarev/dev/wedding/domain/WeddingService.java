@@ -2,13 +2,21 @@ package ponomarev.dev.wedding.domain;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import ponomarev.dev.wedding.api.GuestDto;
 import ponomarev.dev.wedding.api.RsvpDto;
+import ponomarev.dev.wedding.api.VideoStreamResponse;
 import ponomarev.dev.wedding.db.RsvpEntity;
 import ponomarev.dev.wedding.db.WeddingRepository;
 import ponomarev.dev.wedding.utilyty.MapperRsvp;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -67,5 +75,66 @@ public class WeddingService {
         }
         return name.replaceAll("[^\\p{L}\\p{N}]", "") // удаляем всё, кроме букв и цифр
                 .toLowerCase();
+    }
+
+    public VideoStreamResponse streamVideo(String rangeHeader) throws IOException {
+        System.out.println("--- Старт работы стрим видео ---");
+        Resource resource = new ClassPathResource("/static/video/video.mp4");
+
+        if(!resource.exists()) {
+            throw new IOException("Video file not found");
+        }
+
+        long fileSize;
+        try(RandomAccessFile randomAccessFile = new RandomAccessFile(resource.getFile(), "r")) {
+            fileSize = randomAccessFile.length();
+        }
+
+        if(rangeHeader == null) {
+            return new VideoStreamResponse(resource, 0, fileSize - 1, fileSize, fileSize, false);
+        }
+
+        String[] ranges = rangeHeader.replace("bytes=", "").split("-");
+        long start;
+        try {
+            start = Long.parseLong(ranges[0]);
+        } catch(NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid range header");
+        }
+
+        long end = Math.min(
+                ranges.length > 1 && !ranges[1].isEmpty() ? Long.parseLong(ranges[1]) : fileSize - 1,
+                fileSize - 1
+        );
+
+        if(start > end || start < 0) {
+            throw new IllegalArgumentException("Invalid range: start > end or start < 0");
+        }
+
+        long contentLength = end - start + 1;
+
+        RandomAccessFile randomAccessFile = new RandomAccessFile(resource.getFile(), "r");
+        randomAccessFile.seek(start);
+
+        InputStream inputStream = new FileInputStream(randomAccessFile.getFD()) {
+            @Override
+            public int read(byte[] b, int off, int len) throws IOException {
+                long remaining = end - randomAccessFile.getFilePointer() + 1;
+                int bytesToRead = (int) Math.min(len, remaining);
+                if (bytesToRead <= 0) {
+                    return -1;
+                }
+                return super.read(b, off, bytesToRead);
+            }
+        };
+        InputStreamResource inputStreamResource = new InputStreamResource(inputStream) {
+            @Override
+            public long contentLength() {
+                return contentLength;
+            }
+        };
+
+        System.out.println("--- Передаем респонс видео ---");
+        return new VideoStreamResponse(inputStreamResource, start, end, contentLength, fileSize, true);
     }
 }
