@@ -3,6 +3,7 @@ package ponomarev.dev.wedding.domain;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -78,8 +79,7 @@ public class WeddingService {
     }
 
     public VideoStreamResponse streamVideo(String rangeHeader) throws IOException {
-        System.out.println("--- Старт работы стрим видео ---");
-        Resource resource = new ClassPathResource("/static/video/video.mp4");
+        Resource resource = new FileSystemResource("/app/video/video.mp4");
 
         if(!resource.exists()) {
             throw new IOException("Video file not found");
@@ -134,7 +134,6 @@ public class WeddingService {
             }
         };
 
-        System.out.println("--- Передаем респонс видео ---");
         return new VideoStreamResponse(inputStreamResource, start, end, contentLength, fileSize, true);
     }
 }

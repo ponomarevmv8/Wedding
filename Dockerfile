@@ -22,6 +22,7 @@ WORKDIR /app
 # Copy fat jar from builder
 # ... existing code ...
 COPY --from=builder /app/target/wedding-0.0.1-SNAPSHOT.jar /app/app.jar
+COPY src/main/resources/static/video/video.mp4 /app/video/video.mp4
 
 EXPOSE 8080
 
