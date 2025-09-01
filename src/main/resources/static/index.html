@@ -342,6 +342,13 @@
         <button id="btnEdit" type="button" style="background:#fff;color:var(--accent);border:1px solid var(--accent)">Изменить ответ</button>
         <button id="btnView" type="button">Кто идёт</button>
       </div>
+      <div id="proposalVideo" style="display:none; margin-top:20px; text-align:center">
+        <h3 style="font-family:'Cormorant Garamond',serif;color:var(--accent);font-size:1.4rem;margin-bottom:12px">Предложение руки и сердца</h3>
+                 <video id="proposalVideoPlayer" controls muted autoplay style="max-width:100%;border-radius:8px;box-shadow:var(--shadow)">
+           <source src="/api/rsvp/proposal-video" type="video/mp4">
+           Ваш браузер не поддерживает видео.
+         </video>
+      </div>
     </div>
   </section>
 
@@ -403,6 +410,8 @@
     const postActions = document.getElementById('postActions');
     const btnEdit = document.getElementById('btnEdit');
     const btnView = document.getElementById('btnView');
+    const proposalVideo = document.getElementById('proposalVideo');
+    const proposalVideoPlayer = document.getElementById('proposalVideoPlayer');
 
     function renderSaved(){
       const saved = localStorage.getItem('rsvp_v1');
@@ -413,10 +422,32 @@
         const map = {yes:'придёте один(а)', plus:'придёте с парой', no:'не придёте'};
         thanks.textContent = `Спасибо, ${data.name}! Вы указали, что ${map[data.answer]}.`;
         if(postActions){ postActions.style.display = 'flex'; }
+                 // Показываем видео только если его ещё не загружали
+         if(!localStorage.getItem('video_loaded')) {
+           if(proposalVideo){ proposalVideo.style.display = 'block'; }
+           if(proposalVideoPlayer){
+             proposalVideoPlayer.load(); // Загружаем видео с сервера
+             proposalVideoPlayer.play().catch(e => console.log('Автозапуск видео заблокирован браузером'));
+             localStorage.setItem('video_loaded', 'true');
+           }
+         } else {
+           // Если видео уже загружали, показываем блок и запускаем
+           if(proposalVideo){ proposalVideo.style.display = 'block'; }
+           if(proposalVideoPlayer){
+             proposalVideoPlayer.currentTime = 0; // Начинаем с начала
+             proposalVideoPlayer.play().catch(e => console.log('Автозапуск видео заблокирован браузером'));
+           }
+         }
       } else {
         if(postActions){ postActions.style.display = 'none'; }
         thanks.style.display='none';
         form.style.display='block';
+        // Скрываем видео при редактировании
+        if(proposalVideo){ proposalVideo.style.display = 'none'; }
+        if(proposalVideoPlayer){
+          proposalVideoPlayer.pause();
+          proposalVideoPlayer.currentTime = 0;
+        }
       }
     }
     renderSaved();
@@ -442,9 +473,17 @@
         if(!res.ok){
           throw new Error('Сервер вернул ошибку ' + res.status);
         }
-        // Сохраняем локально только при успешной отправке
-        localStorage.setItem('rsvp_v1', JSON.stringify(payload));
-        renderSaved();
+                 // Сохраняем локально только при успешной отправке
+         localStorage.setItem('rsvp_v1', JSON.stringify(payload));
+         renderSaved();
+         
+         // Запускаем видео сразу после успешной отправки
+         if(proposalVideo && proposalVideoPlayer) {
+           proposalVideo.style.display = 'block';
+           proposalVideoPlayer.load();
+           proposalVideoPlayer.play().catch(e => console.log('Автозапуск видео заблокирован браузером'));
+           localStorage.setItem('video_loaded', 'true');
+         }
       }catch(err){
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
